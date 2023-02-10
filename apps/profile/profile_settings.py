@@ -80,7 +80,7 @@ layout = html.Div(
                                                                 dbc.Label("SSN:"),
                                                                 dbc.Col(
                                                                     dbc.Input(
-                                                                        type='number',
+                                                                        # type='number',
                                                                         id='profilesettings_ssn', 
                                                                         placeholder='SSN',
                                                                     ),
@@ -252,20 +252,31 @@ layout = html.Div(
         Input('url', 'pathname'),
     ],
     [
-        State('url', 'search')
+        # State('url', 'search')
+        State('currentptcptid', 'data'),
     ]
 )
-def profile_loadpersonalinfo(pathname, search):
+def profile_loadinfo(pathname, currentptcptid):
     if pathname == '/profile/profile_settings':
-        parsed = urlparse(search)
-        ptcptid = parse_qs(parsed.query)['id'][0]
+        # parsed = urlparse(search)
+        # ptcptid = parse_qs(parsed.query)['id'][0]
 
         sql = """
-            SELECT ptcpt_name, email, username, brt_dt, gender, mobile_num, address, ssn 
-            FROM participant
-            WHERE ptcpt_id = %s
+            SELECT 
+                ptcpt_name, 
+                user_email, 
+                user_name, 
+                brt_dt, 
+                gender, 
+                COALESCE(CAST(mobile_num AS varchar), 'N/A'), 
+                COALESCE(CAST(address AS varchar), 'N/A'), 
+                COALESCE(CAST(ssn AS varchar), 'N/A')
+            FROM participant p
+                INNER JOIN users u 
+                    ON p.ptcpt_id = u.ptcpt_id 
+            WHERE p.ptcpt_id = %s;
         """
-        values = [ptcptid]
+        values = [currentptcptid]
         cols = ['name', 'email', 'username', 'birthday', 'sex', 'mobile', 'address', 'ssn']
         
         df = db.querydatafromdatabase(sql, values, cols)
@@ -306,11 +317,11 @@ def profile_loadpersonalinfo(pathname, search):
         State('profilesettings_mobile', 'value'),
         State('profilesettings_address', 'value'),
         State('profilesettings_ssn', 'value'),
-        State('url', 'search'),
-        # State('movieprof_removerecord', 'value'),
+        State('currentptcptid', 'data'),
+        # State('url', 'search'),
     ]
 )
-def movieprofile_saveprofile(savetbtn, name, email, user, bday, sex, mobile, address, ssn, search):
+def profile_saveprofile(savetbtn, name, email, username, bday, sex, mobile, address, ssn, currentptcptid):
     ctx = dash.callback_context
     if ctx.triggered:
         eventid = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -320,47 +331,51 @@ def movieprofile_saveprofile(savetbtn, name, email, user, bday, sex, mobile, add
             alert_color = ''
             alert_text = ''
             inputs = [
-                name, 
-                email, 
-                user, 
+                name,
                 bday, 
                 sex, 
                 mobile, 
                 address, 
-                ssn
+                ssn,
+                email,
+                username
             ]
 
             if not all(inputs):
                 alert_open = True
                 alert_color = 'danger'
                 alert_text = 'Please supply all inputs'
-            elif len(ssn)>9:
-                alert_open = True
-                alert_color = 'danger'
-                alert_text = 'SSN is too long. Must be 9 digits'
-            elif len(ssn)<9:
-                alert_open = True
-                alert_color = 'danger'
-                alert_text = 'SSN is too short. Must be 9 digits'
+            # elif len(ssn)>9:
+            #     alert_open = True
+            #     alert_color = 'danger'
+            #     alert_text = 'SSN is too long. Must be 9 digits'
+            # elif len(ssn)<9:
+            #     alert_open = True
+            #     alert_color = 'danger'
+            #     alert_text = 'SSN is too short. Must be 9 digits'
             else:
-                parsed = urlparse(search)             
-                ptcptid = parse_qs(parsed.query)['id'][0]
+                # parsed = urlparse(search)             
+                # ptcptid = parse_qs(parsed.query)['id'][0]
 
                 sql = """
-                    UPDATE participant 
-                    SET 
-                        ptcpt_name = %s,
-                        email = %s,
-                        username = %s,
-                        brt_dt = %s,
-                        gender = %s,
-                        mobile_num = %s,
-                        address = %s,
-                        ssn = %s
-                    WHERE ptcpt_id = %s;
+                    WITH profile_changes AS (
+                        UPDATE participant 
+                        SET ptcpt_name = %s,
+                            brt_dt = %s,
+                            gender = %s,
+                            mobile_num = %s,
+                            address = %s,
+                            ssn = %s
+                        WHERE ptcpt_id = %s
+                        RETURNING * 
+                    )
+                    UPDATE users 
+                    SET user_name = %s,
+                        user_email = %s
+                    WHERE ptcpt_id in (select ptcpt_id from profile_changes);
                 """
 
-                values = [name, email, user, bday, sex, mobile, address, ssn, ptcptid]
+                values = [name, bday, sex, mobile, address, ssn, currentptcptid, username, email]
 
                 db.modifydatabase(sql, values)
                 modal_open = True

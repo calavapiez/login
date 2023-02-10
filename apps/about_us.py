@@ -44,8 +44,9 @@ layout = html.Div(
                 ), title="Gallery"
             ),
             dbc.AccordionItem(
+                
                 html.Div(
-                    html.H4("Are there finisher medals?"),
+                [    html.H4("Are there finisher medals?"),
                     html.Hr,
                     html.P(
                         "There are award medals for the top 15 male and female runners after official race results have been posted.",
@@ -68,6 +69,7 @@ layout = html.Div(
                     html.P(
                         "Yes. For $10 we will issue you a new bib number with a timing tag. If you have already received your packet and your virtual bib number, contact us at race@bolderboulder.com with your request.",
                     )
+                ]
                 ), title="Frequently Asked Questions"
             ),
         ],

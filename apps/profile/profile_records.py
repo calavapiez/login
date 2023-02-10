@@ -7,12 +7,18 @@ from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State
 import pandas as pd
 
+
 from app import app
 from apps import dbconnect as db
 
 
 layout=html.Div(
     [
+        # html.Div(
+        #     [
+        #     dcc.Store(id='profilerecords_toload', storage_type='memory', data=0),
+        #     ]
+        # ),
         html.H3("Personal Race Records"),
         html.Hr(),
         html.Div(
@@ -29,48 +35,44 @@ layout=html.Div(
     ],
     [
         Input('url', 'pathname'),
-        # Input('moviehome_titlefilter', 'value'),
+    ],
+    [
+        State('currentptcptid', 'data'),
     ]
 )
-def updatemovielist(pathname):
+def addracelist(pathname, currentptcptid):
     if pathname == '/profile/profile_records':
-        # 1. query the relevant records
-        sql = """SELECT race_name, race_date, cmplt, rnkg, run_tm
+
+        sql = """
+            SELECT race_name, date, cmplt, rnkg, run_tm
+            FROM(
+                SELECT 
+                    ptcpt_id,
+                    race_name, 
+                    TO_CHAR(race_date, 'Mon dd, yyyy') AS date, 
+                    UPPER(cmplt::text) AS cmplt, 
+                    DENSE_RANK () OVER(
+                            PARTITION BY r.race_id
+                            ORDER BY irr.run_tm
+                        ) AS rnkg, 
+                    run_tm
                 FROM race r
-                    INNER JOIN individual_race_record irr ON r.race_id = irr.race_id
-                WHERE NOT irr_delete_ind AND ptcpt_id = 1"""
-        val = []
+                    INNER JOIN individual_race_record irr 
+                        ON r.race_id = irr.race_id
+                WHERE NOT irr_delete_ind 
+            ) add_rank
+            WHERE ptcpt_id = %s;
+        """
+        val = [currentptcptid]
         colnames = ['Event Name', 'Date', 'Completed?', 'Ranking', 'Run Time']
 
-        # if searchterm:
-        #     sql += """ AND movie_name ILIKE %s"""
-        #     val += [f"%{searchterm}%"]
-
-
         races = db.querydatafromdatabase(sql, val, colnames)
-        
-        # # 2. create the table and add it to the db
-        # if movies.shape[0]:
-        #     # add the buttons with the respective href
-        #     buttons = []
-        #     for movie_id in movies['ID']:
-        #         buttons += [
-        #             html.Div(
-        #             dbc.Button('Edit', href=f"/movies/movies_profile?mode=edit&id={movie_id}",
-        #                         size='sm', color='primary'),
-        #             style={'text-align': 'center'}
-        #             )
-        #         ]
-            
-        #     # add the buttons to the movies table
-        #     movies['Action'] = buttons
+        print(races)
 
-        #     #remove the ID column
-        #     movies.drop('ID', axis=1, inplace=True),
-            
-        table = dbc.Table.from_dataframe(races, striped=True, bordered=True, hover=True, size='sm')
-        return [table]
-        # else:
-        #     return ["No records to display."]
+        if races.shape[0]:            
+            table = dbc.Table.from_dataframe(races, striped=True, bordered=True, hover=True, size='sm')
+            return [table]
+        else:
+            return ["No records to display."]
     else:
         raise PreventUpdate

@@ -157,7 +157,7 @@ def updatewinnerslist(pathname, filtervalue):
                     TO_CHAR(race_date, 'Mon dd, yyyy'), 
                     run_tm, 
                     ptcpt_name,
-                    RANK () OVER(
+                    DENSE_RANK () OVER(
                         PARTITION BY r.race_id
                         ORDER BY irr.run_tm
                     )
@@ -183,7 +183,7 @@ def updatewinnerslist(pathname, filtervalue):
             sql += """ AND p.gender = 'Female' AND AGE(p.brt_dt) > interval '40 years'"""
         
 
-        sql += """) rank_filter WHERE RANK = 1"""
+        sql += """) rank_filter WHERE DENSE_RANK = 1"""
 
         races = db.querydatafromdatabase(sql, val, colnames)
         
@@ -324,7 +324,7 @@ def updatecurrentlist(pathname):
             FROM participant p
             INNER JOIN individual_race_record irr
                 ON irr.ptcpt_id = p.ptcpt_id
-            WHERE irr.race_id=(SELECT max(race_id) FROM race)
+            WHERE irr.race_id=(SELECT race_id FROM race WHERE race_date = (SELECT MAX(race_date) FROM race))
             ORDER BY age, p.gender, irr.run_tm
         """
 
@@ -360,7 +360,7 @@ def updatewinnersgraph(pathname, filtervalue):
                     EXTRACT(YEAR FROM race_date),
                     run_tm, 
                     ptcpt_name,
-                    RANK () OVER(
+                    DENSE_RANK () OVER(
                         PARTITION BY r.race_id
                         ORDER BY irr.run_tm
                     )
@@ -382,7 +382,7 @@ def updatewinnersgraph(pathname, filtervalue):
         elif filtervalue == 'Female Master Open':
             sql += """ AND p.gender = 'Female' AND AGE(p.brt_dt) > interval '40 years'"""
         
-        sql += """) rank_filter WHERE RANK = 1"""
+        sql += """) rank_filter WHERE DENSE_RANK = 1"""
 
         val = []
         colnames = ['Year', 'Run Time', 'Name', 'Rank']
@@ -428,7 +428,7 @@ def updatewinnersgraph(pathname, filtervalue):
         Input('url', 'pathname'),
     ]
 )
-def updatewinnersgraph(pathname):
+def updateagegraph(pathname):
     if pathname == '/management':
         sql = """
             SELECT * FROM (

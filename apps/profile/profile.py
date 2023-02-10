@@ -148,24 +148,27 @@ layout = html.Div(
         Input('url', 'pathname'),
     ],
     [
-        State('url', 'search')
+        # State('url', 'search')
+        State('currentptcptid', 'data'),
     ]
 )
-def profile_loadpersonalinfo(pathname, search):
+def profile_loadpersonalinfo(pathname, currentptcptid):
       
     if pathname == '/profile':
-        parsed = urlparse(search)
-        ptcptid = parse_qs(parsed.query)['id'][0]
+        # parsed = urlparse(search)
+        # ptcptid = parse_qs(parsed.query)['id'][0]
 
         sql = """
-            SELECT ptcpt_name, email, username, 
+            SELECT ptcpt_name, user_email, user_name, 
                 CONCAT(CAST(DATE_PART('year',AGE(brt_dt)) AS varchar(10)), ' years old'), 
                 CONCAT('(', TO_CHAR(brt_dt, 'Mon dd, yyyy'), ')'), 
-                gender, mobile_num, address, ssn 
-            FROM participant
-            WHERE ptcpt_id = %s
+                gender, mobile_num, address, ssn
+            FROM participant p
+                INNER JOIN users u 
+                    ON p.ptcpt_id = u.ptcpt_id 
+            WHERE p.ptcpt_id = %s;
         """
-        values = [ptcptid]
+        values = [currentptcptid]
         cols = ['name', 'email', 'username', 'age', 'birthday', 'sex', 'mobile', 'address', 'ssn']
         
         df = db.querydatafromdatabase(sql, values, cols)
@@ -197,20 +200,47 @@ def profile_loadpersonalinfo(pathname, search):
         Input('url', 'pathname'),
     ],
     [
-        State('url', 'search')
+        # State('url', 'search')
+        State('currentptcptid', 'data'),
+        
     ]
 )
-def profile_loadraceinfo(pathname, search):
+def profile_loadraceinfo(pathname, currentptcptid):
     if pathname == '/profile':
-        parsed = urlparse(search)
-        ptcptid = parse_qs(parsed.query)['id'][0]
+        # parsed = urlparse(search)
+        # ptcptid = parse_qs(parsed.query)['id'][0]
 
         sql = """
-            SELECT MIN(run_tm), TO_CHAR(AVG(run_tm), 'HH24:MI:SS'), count(run_tm), count(run_tm) filter(where cmplt=B'1')
-            from individual_race_record
-            where ptcpt_id=%s;
+            WITH count_tm AS (
+                SELECT 
+                    ptcpt_id, 
+                    TO_CHAR(AVG(run_tm), 'HH24:MI:SS') AS avrg, 
+                    count(run_tm) AS joined, 
+                    count(run_tm) filter(where cmplt=true) AS completed	
+                FROM individual_race_record
+                GROUP BY ptcpt_id
+            ), pt_tm AS (
+                SELECT 
+                    ptcpt_id,
+                    MIN(time) AS pr
+                FROM (
+                    SELECT ptcpt_id, pr AS time FROM participant 
+                    UNION ALL
+                    SELECT ptcpt_id, run_tm AS time FROM individual_race_record		
+                ) recorded_times
+                GROUP BY ptcpt_id
+            )
+            SELECT  
+                pr, 
+                COALESCE(CAST(avrg AS varchar), 'N/A'), 
+                COALESCE(CAST(joined AS varchar), '0'), 
+                COALESCE(CAST(completed AS varchar), '0')
+            FROM count_tm c 
+                RIGHT JOIN pt_tm p 
+                    ON c.ptcpt_id = p.ptcpt_id
+            WHERE p.ptcpt_id = %s;
         """
-        values = [ptcptid]
+        values = [currentptcptid]
         cols = ['pr', 'avrg', 'joined', 'completed']
         
         df = db.querydatafromdatabase(sql, values, cols)

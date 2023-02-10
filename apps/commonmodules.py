@@ -7,7 +7,7 @@ from dash.exceptions import PreventUpdate
 from app import app
 
 navlink_style = {
-    'color': '#fff',
+    'color': '#fff', 'margin-right': '1em'
 }
 
 navbar = dbc.Navbar(
@@ -30,6 +30,7 @@ navbar = dbc.Navbar(
         dbc.NavLink("Profile", href="/profile", style=navlink_style),
         dbc.NavLink("Database", href="/database", style=navlink_style),
         dbc.NavLink("Management", href="/management", style=navlink_style),
+        dbc.NavLink("Login", href="/login", style=navlink_style),
         dbc.NavLink("Logout", href="/logout", style=navlink_style)
 
     ],

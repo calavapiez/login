@@ -12,9 +12,9 @@ layout = html.Div(
     [
         dbc.CardImg(
             #input img src
-            src="/assets/images/BBK101.webp",
+            src="/assets/images/BB10K1.webp",
             top=True,
-            style={"opacity": 0.5},
+            style={"opacity": 0.5, "width":"auto"},
         ),
         dbc.CardImgOverlay(
             dbc.CardBody(

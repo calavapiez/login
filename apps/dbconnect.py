@@ -4,7 +4,7 @@ import pandas as pd
 def getdblocation():
     db = psycopg2.connect(
         host='localhost',
-        database='172 Project',
+        database='172database_angela',
         user='postgres',
         port=5432,
         password='admin'

@@ -9,9 +9,11 @@ import webbrowser
 from app import app
 from apps import commonmodules as cm
 from apps import adminmodules as am
-from apps import home
+from apps import homepage
 from apps import login
 from apps import signup
+from apps import about_us
+# from apps import contact_us
 from apps.events import events_home
 from apps.events import events_profile
 from apps.events import events_results
@@ -41,11 +43,10 @@ app.layout = html.Div(
         # 3) currentrole -- stores the role
         # we will not use them but if you have roles, you can use it
         dcc.Store(id='currentrole', data=-1, storage_type='session'),
+
+        dcc.Store(id='currentptcptid', data=-1, storage_type='session'),
         
-        html.Div(
-            # cm.navbar,
-            id='navbar_div'
-        ),
+        html.Div(cm.navbar, id='navbar_div'),
 
         html.Div(id='page-content', style=CONTENT_STYLE),
     ]
@@ -77,23 +78,31 @@ def displaypage(pathname, sessionlogout, currentuserid, currentrole):
     if eventid == 'url':
         print(currentuserid, currentrole, pathname)
         if currentuserid < 0:
-            if pathname in ['/']:
+            if pathname  == '/' or pathname == '/home':
+                returnlayout = homepage.layout
+            elif pathname == '/login':
                 returnlayout = login.layout
             elif pathname == '/signup':
                 returnlayout = signup.layout
+            elif pathname == '/home':
+                returnlayout = homepage.layout
+            elif pathname == '/about':
+                returnlayout = about_us.layout
+            elif pathname == '/contact':
+                returnlayout = 'contact_us.layout'
             else:
-                returnlayout = '404: request not found'
+                returnlayout = login.layout
        
         else:
             if pathname == '/logout':
                 returnlayout = login.layout
                 sessionlogout = True
             elif pathname == '/' or pathname == '/home':
-                returnlayout = home.layout
+                returnlayout = homepage.layout
             elif pathname == '/about':
-                returnlayout = "insert about info here"
+                returnlayout = about_us.layout
             elif pathname == '/contact':
-                returnlayout = "insert contact details here"
+                returnlayout = 'contact_us.layout'
 
             elif pathname == '/events/events_home':
                 returnlayout = events_home.layout
@@ -119,45 +128,32 @@ def displaypage(pathname, sessionlogout, currentuserid, currentrole):
 
             else:
                 returnlayout = 'error404'
-                
-        if currentrole > 0:
-            navbar_div = am.navbar
-        elif currentrole < 0: 
-            navbar_div = cm.navbar
     else:
         raise PreventUpdate
     
-    # if currentrole > 0:
-    #     navbar_div = am.navbar
-    # elif currentrole < 0: 
-    #         navbar_div = cm.navbar
-    # else:
-    #     raise PreventUpdate
-
     navbar_div = {'display': 'none' if sessionlogout else 'unset'}
     return [returnlayout, navbar_div, sessionlogout]
 
 
 # @app.callback(
 #     [
-#         Output('navbar_div', 'style'),
+#         Output('navbar_div', 'children'),
 #     ],
 #     [
 #         Input('currentrole', 'data'),
 #     ],
-#     # [
-#     #     State('currentrole', 'data'),
-#     # ]
 # )
 # def displaynavbar(currentrole):
-#     if currentrole < 0:
-#         navbar_div = cm.navbar
-#     elif currentrole > 0:
-#         navbar_div = am.navbar
+#     ctx = dash.callback_context
+#     if ctx.triggered:
+#         if currentrole < 0:
+#             navbar = cm.navbar
+#         elif currentrole > 0:
+#             navbar = am.navbar
 #     else:
 #         raise PreventUpdate
     
-#     return [navbar_div]
+#     return [navbar]
 
 
 if __name__ == '__main__':     
